@@ -11,6 +11,12 @@ class Siswa extends Model
 
     protected $guarded = [];
 
+    public function pengumpulanTugas()
+    {
+        // Pastikan nama tabel benar
+        return $this->hasMany(PengumpulanTugas::class, 'siswa_id');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

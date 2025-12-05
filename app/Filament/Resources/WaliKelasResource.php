@@ -21,60 +21,63 @@ class WaliKelasResource extends Resource
 
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                Select::make('guru_id')
-                    ->label('Pilih Guru (Wali Kelas)')
-                    // FIX UTAMA: Gunakan getOptionLabelFromRecordUsing untuk memaksa
-                    // Filament menggunakan Accessor Eloquent 'full_name' dan bukan
-                    // mencoba membuat query langsung ke kolom 'nama' di DB.
-                    ->relationship(name: 'guru', titleAttribute: 'id') // Gunakan ID sebagai titleAttribute default
-                    ->getOptionLabelFromRecordUsing(fn($record) => $record->full_name) // Ambil nama dari Accessor
-                    ->required()
-                    ->searchable()
-                    ->preload(),
+        return $form->schema([
 
-                // Field untuk memilih Kelas
-                Select::make('kelas_id')
-                    ->label('Pilih Kelas')
-                    ->relationship(name: 'kelas', titleAttribute: 'nama')
-                    ->required()
-                    // Constraint unik
-                    ->unique(
-                        ignoreRecord: true,
-                        modifyRuleUsing: fn(Builder $query, $livewire) => $query->where('id', '!=', $livewire->record?->id),
-                    )
-                    ->searchable()
-                    ->preload(),
-            ]);
+            // ==========================
+            // Select Guru (Nama dari users.name)
+            // ==========================
+            Select::make('guru_id')
+                ->label('Pilih Guru (Wali Kelas)')
+                ->relationship('guru', 'id')
+                ->getOptionLabelFromRecordUsing(
+                    fn($record) =>
+                    $record->user?->name ?? 'Tanpa Nama'
+                )
+                ->required()
+                ->searchable()
+                ->preload(),
+
+            // ==========================
+            // Select Kelas (Unique)
+            // ==========================
+            Select::make('kelas_id')
+                ->label('Pilih Kelas')
+                ->relationship('kelas', 'nama')
+                ->required()
+                ->unique(
+                    ignoreRecord: true,
+                    modifyRuleUsing: fn(Builder $query, $livewire) =>
+                    $query->where('id', '!=', $livewire->record?->id),
+                )
+                ->searchable()
+                ->preload(),
+        ]);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                // Kolom untuk menampilkan nama Kelas
-                TextColumn::make('kelas.nama')
-                    ->label('Kelas')
-                    ->sortable()
-                    ->searchable(),
+        return $table->columns([
 
-                // Kolom untuk menampilkan nama Guru menggunakan accessor
-                TextColumn::make('guru.full_name') // Menggunakan 'full_name' dari accessor
-                    ->label('Wali Kelas')
-                    ->sortable()
-                    ->searchable(),
+            // Nama Kelas
+            TextColumn::make('kelas.nama')
+                ->label('Kelas')
+                ->sortable()
+                ->searchable(),
 
-                // Kolom untuk waktu pembuatan (opsional)
-                TextColumn::make('created_at')
-                    ->label('Ditugaskan Sejak')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
-            ])
+            // Nama Guru dari users.name
+            TextColumn::make('guru.user.name')
+                ->label('Wali Kelas')
+                ->sortable()
+                ->searchable(),
+
+            // Waktu dibuat
+            TextColumn::make('created_at')
+                ->label('Ditugaskan Sejak')
+                ->dateTime()
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+        ])
+            ->filters([])
             ->actions([
                 \Filament\Tables\Actions\EditAction::make(),
                 \Filament\Tables\Actions\DeleteAction::make(),

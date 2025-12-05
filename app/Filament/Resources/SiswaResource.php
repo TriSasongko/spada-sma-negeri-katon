@@ -9,6 +9,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Validation\Rule; // <--- PENTING: Import ini wajib ada
 
 class SiswaResource extends Resource
 {
@@ -19,6 +20,7 @@ class SiswaResource extends Resource
 
     public static function canViewAny(): bool
     {
+        // Pastikan hanya admin yang bisa lihat
         return auth()->user()->hasRole('admin');
     }
 
@@ -28,15 +30,28 @@ class SiswaResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Akun Siswa')
                     ->schema([
+                        // Input Nama (Disimpan ke tabel Users via Controller/Page logic)
                         Forms\Components\TextInput::make('name')
                             ->label('Nama Siswa')
                             ->required(),
+
+                        // Input Email dengan Validasi Khusus
                         Forms\Components\TextInput::make('email')
                             ->email()
                             ->required()
-                            ->unique(table: 'users', column: 'email', ignoreRecord: true),
+                            // --- FIX VALIDASI UNIQUE ---
+                            ->rule(function ($record) {
+                                // Saat Edit: Ambil user_id dari siswa tersebut agar di-ignore
+                                $userId = $record?->user_id;
+
+                                // Cek unique ke tabel 'users', kolom 'email', kecuali ID user ini
+                                return Rule::unique('users', 'email')->ignore($userId);
+                            }),
+                            // ---------------------------
+
                         Forms\Components\TextInput::make('password')
                             ->password()
+                            // Hanya simpan jika diisi (agar saat edit tidak wajib isi ulang)
                             ->dehydrated(fn ($state) => filled($state))
                             ->required(fn (string $context): bool => $context === 'create'),
                     ])->columns(2),
@@ -45,6 +60,7 @@ class SiswaResource extends Resource
                     ->schema([
                         Forms\Components\TextInput::make('nis')
                             ->label('NIS')
+                            // Unique di tabel siswas, ignore record siswa yang sedang diedit
                             ->unique(ignoreRecord: true),
 
                         // Relasi ke Kelas
@@ -62,15 +78,27 @@ class SiswaResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')->label('Nama')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('nis')->label('NIS')->searchable(),
-                Tables\Columns\TextColumn::make('kelas.nama')->label('Kelas')->sortable(),
-                Tables\Columns\TextColumn::make('user.email')->label('Email'),
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Nama')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('nis')
+                    ->label('NIS')
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('kelas.nama')
+                    ->label('Kelas')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('user.email')
+                    ->label('Email'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                // Hapus User juga saat Siswa dihapus
                 Tables\Actions\DeleteAction::make()
-                     ->before(fn (Siswa $record) => $record->user->delete()),
+                     ->before(fn (Siswa $record) => $record->user?->delete()),
             ]);
     }
 

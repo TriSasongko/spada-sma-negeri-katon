@@ -9,7 +9,6 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class WaliKelasResource extends Resource
 {
@@ -24,10 +23,10 @@ class WaliKelasResource extends Resource
         return $form->schema([
 
             // ==========================
-            // Select Guru (Nama dari users.name)
+            // Select Guru
             // ==========================
             Select::make('guru_id')
-                ->label('Pilih Guru (Wali Kelas)')
+                ->label('Pilih Guru')
                 ->relationship('guru', 'id')
                 ->getOptionLabelFromRecordUsing(
                     fn($record) =>
@@ -38,18 +37,17 @@ class WaliKelasResource extends Resource
                 ->preload(),
 
             // ==========================
-            // Select Kelas (Unique)
+            // Select Kelas (UNIQUE)
             // ==========================
             Select::make('kelas_id')
                 ->label('Pilih Kelas')
                 ->relationship('kelas', 'nama')
                 ->required()
                 ->unique(
+                    table: 'wali_kelas',
+                    column: 'kelas_id',
                     ignoreRecord: true,
-                    modifyRuleUsing: fn(Builder $query, $livewire) =>
-                    $query->where('id', '!=', $livewire->record?->id),
                 )
-                ->searchable()
                 ->preload(),
         ]);
     }
@@ -58,34 +56,24 @@ class WaliKelasResource extends Resource
     {
         return $table->columns([
 
-            // Nama Kelas
             TextColumn::make('kelas.nama')
                 ->label('Kelas')
-                ->sortable()
-                ->searchable(),
+                ->searchable()
+                ->sortable(),
 
-            // Nama Guru dari users.name
             TextColumn::make('guru.user.name')
                 ->label('Wali Kelas')
-                ->sortable()
-                ->searchable(),
+                ->searchable()
+                ->sortable(),
 
-            // Waktu dibuat
             TextColumn::make('created_at')
                 ->label('Ditugaskan Sejak')
                 ->dateTime()
-                ->sortable()
-                ->toggleable(isToggledHiddenByDefault: true),
+                ->sortable(),
         ])
-            ->filters([])
             ->actions([
                 \Filament\Tables\Actions\EditAction::make(),
                 \Filament\Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                \Filament\Tables\Actions\BulkActionGroup::make([
-                    \Filament\Tables\Actions\DeleteBulkAction::make(),
-                ]),
             ]);
     }
 
@@ -97,4 +85,10 @@ class WaliKelasResource extends Resource
             'edit' => Pages\EditWaliKelas::route('/{record}/edit'),
         ];
     }
+    public static function canViewAny(): bool
+    {
+        // Hanya admin yang bisa melihat menu Wali Kelas
+        return auth()->user()?->hasRole('admin');
+    }
+
 }

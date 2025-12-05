@@ -3,76 +3,89 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\KelolaKelasResource\Pages;
-use App\Filament\Resources\KelasResource\RelationManagers\SiswasRelationManager; // Pastikan baris ini ada
+use App\Filament\Resources\KelasResource\RelationManagers\SiswasRelationManager;
 use App\Models\Kelas;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class KelolaKelasResource extends Resource
 {
-    // Menghubungkan ke Model Kelas
     protected static ?string $model = Kelas::class;
 
-    // KONFIGURASI MENU NAVIGASI
-    protected static ?string $navigationLabel = 'Kelola Kelas'; // Nama di Sidebar
-    protected static ?string $slug = 'kelola-kelas'; // URL di browser
-    protected static ?string $modelLabel = 'Kelola Kelas'; // Label tunggal
-    protected static ?string $navigationGroup = 'Master Data'; // Grup menu
-    protected static ?string $navigationIcon = 'heroicon-o-users'; // Ikon menu (User Group)
+    protected static ?string $navigationLabel = 'Kelola Kelas';
+    protected static ?string $slug = 'kelola-kelas';
+    protected static ?string $modelLabel = 'Kelola Kelas';
+    protected static ?string $navigationGroup = 'Master Data';
+    protected static ?string $navigationIcon = 'heroicon-o-users';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                // Tampilan Form (Read Only)
-                // Hanya untuk info kelas mana yang sedang dikelola
                 Forms\Components\Section::make('Informasi Kelas')
                     ->schema([
                         Forms\Components\TextInput::make('nama')
                             ->label('Nama Kelas')
-                            ->disabled() // Tidak bisa diedit di sini
-                            ->dehydrated(false), // Data tidak dikirim ke DB saat save
-                    ])
+                            ->disabled()
+                            ->dehydrated(false),
+
+                        // PERBAIKAN DI SINI:
+                        // 1. Ganti nama field jadi 'wali_kelas_display' (agar tidak bentrok dengan logic binding model)
+                        // 2. Gunakan formatStateUsing untuk mengambil data secara manual
+                        Forms\Components\TextInput::make('wali_kelas_display')
+                            ->label('Wali Kelas')
+                            ->disabled()
+                            ->dehydrated(false) // Data ini tidak perlu disimpan ke DB
+                            ->formatStateUsing(function ($record) {
+                                // Jika record belum ada (create mode), return null
+                                if (!$record) return null;
+
+                                // Ambil data secara manual: Kelas -> WaliKelas -> Guru -> User -> Name
+                                // Tanda '?' (null safe operator) mencegah error jika data kosong di tengah jalan
+                                return $record->waliKelas?->guru?->user?->name ?? 'Belum ditentukan';
+                            }),
+                    ])->columns(2)
             ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            // Optimasi Query (Eager Loading) agar loading halaman list cepat
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['waliKelas.guru.user']))
             ->columns([
-                // Kolom Nama Kelas
                 Tables\Columns\TextColumn::make('nama')
                     ->label('Nama Kelas')
                     ->searchable()
                     ->sortable(),
 
-                // Kolom Jumlah Siswa (Otomatis menghitung dari relasi)
+                // Di Tabel, dot notation biasanya aman karena Filament menanganinya berbeda
+                Tables\Columns\TextColumn::make('waliKelas.guru.user.name')
+                    ->label('Wali Kelas')
+                    ->placeholder('Belum ada')
+                    ->searchable()
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('siswas_count')
                     ->counts('siswas')
                     ->label('Jumlah Siswa')
                     ->sortable(),
             ])
-            ->filters([
-                // Tidak perlu filter
-            ])
             ->actions([
-                // Tombol Aksi Utama
                 Tables\Actions\EditAction::make()
-                    ->label('Kelola Siswa') // Ubah teks tombol Edit
+                    ->label('Kelola Siswa')
                     ->icon('heroicon-m-user-group'),
             ])
-            ->bulkActions([
-                // Kosongkan agar tidak ada opsi hapus massal
-            ]);
+            ->bulkActions([]);
     }
 
     public static function getRelations(): array
     {
         return [
-            // Memanggil Tab Manajer Siswa
             SiswasRelationManager::class,
         ];
     }
@@ -85,8 +98,6 @@ class KelolaKelasResource extends Resource
         ];
     }
 
-    // MEMATIKAN FITUR "BUAT KELAS BARU"
-    // Karena pembuatan kelas dilakukan di menu "Kelas" yang asli
     public static function canCreate(): bool
     {
         return false;

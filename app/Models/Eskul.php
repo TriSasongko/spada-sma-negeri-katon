@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Eskul extends Model
 {
@@ -15,8 +14,19 @@ class Eskul extends Model
     protected $guarded = [];
 
     /**
-     * Relasi Many-to-Many ke Guru melalui tabel pivot pembina_eskul.
-     * Menggunakan model PembinaEskul sebagai model pivot.
+     * Relasi Many-to-Many ke Siswa (Anggota Eskul).
+     * Tabel Pivot: eskul_siswa
+     */
+    public function siswas(): BelongsToMany
+    {
+        // Parameter: Model Tujuan, Nama Tabel Pivot, FK Model Ini, FK Model Tujuan
+        return $this->belongsToMany(Siswa::class, 'eskul_siswa', 'eskul_id', 'siswa_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Relasi Many-to-Many ke Guru (Pembina).
+     * Tabel Pivot: pembina_eskul
      */
     public function pembinas(): BelongsToMany
     {

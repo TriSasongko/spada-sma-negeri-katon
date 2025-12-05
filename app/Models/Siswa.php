@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany; // Jangan lupa import ini
 
 class Siswa extends Model
 {
@@ -11,9 +12,18 @@ class Siswa extends Model
 
     protected $guarded = [];
 
+    /**
+     * Relasi Many-to-Many ke Eskul.
+     * Siswa bisa mengikuti banyak Eskul.
+     */
+    public function eskuls(): BelongsToMany
+    {
+        return $this->belongsToMany(Eskul::class, 'eskul_siswa', 'siswa_id', 'eskul_id')
+            ->withTimestamps();
+    }
+
     public function pengumpulanTugas()
     {
-        // Pastikan nama tabel benar
         return $this->hasMany(PengumpulanTugas::class, 'siswa_id');
     }
 
@@ -26,7 +36,4 @@ class Siswa extends Model
     {
         return $this->belongsTo(Kelas::class);
     }
-
-    // Helper untuk mengambil mapel berdasarkan kelas siswa
-    // Nanti berguna di dashboard siswa
 }

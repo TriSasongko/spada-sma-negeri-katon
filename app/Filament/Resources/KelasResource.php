@@ -20,9 +20,11 @@ class KelasResource extends Resource
 
     public static function canViewAny(): bool
     {
+        // Hanya user dengan role 'admin' yang bisa mengakses resource ini
         return auth()->user()->hasRole('admin');
     }
 
+    // --- Definisi Form ---
     public static function form(Form $form): Form
     {
         return $form
@@ -30,27 +32,38 @@ class KelasResource extends Resource
                 Forms\Components\TextInput::make('nama')
                     ->label('Nama Kelas')
                     ->placeholder('X IPA 1')
-                    ->required(),
-                Forms\Components\TextInput::make('jurusan')
-                    ->label('Jurusan')
-                    ->placeholder('IPA/IPS')
-                    ->required(),
+                    ->required()
+                    ->maxLength(255), // Opsional: Tambahkan validasi panjang maksimum
+                // Field 'jurusan' telah dihapus dari form.
             ]);
     }
 
+    // --- Definisi Tabel ---
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('nama')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('jurusan')->sortable(),
+                Tables\Columns\TextColumn::make('nama')
+                    ->label('Nama Kelas')
+                    ->sortable()
+                    ->searchable(),
+                // Kolom 'jurusan' telah dihapus dari tabel.
+            ])
+            ->filters([
+                //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
             ]);
     }
 
+    // --- Definisi Halaman ---
     public static function getPages(): array
     {
         return [

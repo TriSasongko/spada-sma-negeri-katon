@@ -30,4 +30,8 @@ class Guru extends Model
     {
         return $this->belongsToMany(Kelas::class, 'guru_kelas', 'guru_id', 'kelas_id');
     }
+    public function waliKelas()
+    {
+        return $this->hasOne(WaliKelas::class);
+    }
 }

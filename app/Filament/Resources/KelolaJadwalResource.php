@@ -25,7 +25,7 @@ class KelolaJadwalResource extends Resource
     protected static ?string $modelLabel = 'Jadwal Kelas';
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
     protected static ?int $navigationSort = 4;
-    protected static ?string $slug = 'kelola-jadwal'; 
+    protected static ?string $slug = 'kelola-jadwal';
 
     public static function form(Form $form): Form
     {
@@ -45,7 +45,7 @@ class KelolaJadwalResource extends Resource
                     ->description('Tambahkan sesi pelajaran untuk kelas ini.')
                     ->schema([
                         // 'jadwals' adalah nama fungsi relasi hasMany di Model Kelas
-                        Forms\Components\Repeater::make('jadwals') 
+                        Forms\Components\Repeater::make('jadwals')
                             ->relationship()
                             ->label('')
                             ->addActionLabel('Tambah Sesi Pelajaran')
@@ -63,7 +63,7 @@ class KelolaJadwalResource extends Resource
                                                 'Sabtu' => 'Sabtu',
                                             ])
                                             ->required(),
-                                        
+
                                         Forms\Components\TimePicker::make('jam_mulai')
                                             ->label('Mulai')
                                             ->seconds(false)
@@ -93,7 +93,7 @@ class KelolaJadwalResource extends Resource
                                             ->label('Guru Pengampu')
                                             ->options(function (Get $get) {
                                                 $mapelId = $get('mapel_id');
-                                                
+
                                                 if (!$mapelId) {
                                                     return []; // Kosongkan jika mapel belum dipilih
                                                 }

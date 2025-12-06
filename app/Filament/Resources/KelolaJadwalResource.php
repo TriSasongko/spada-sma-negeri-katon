@@ -16,41 +16,35 @@ use Filament\Tables\Table;
 
 class KelolaJadwalResource extends Resource
 {
-    // Kita bind ke Model Kelas, karena flow-nya "Pilih Kelas -> Edit Jadwal Kelas Itu"
     protected static ?string $model = Kelas::class;
 
-    // Konfigurasi Tampilan Menu Sidebar
     protected static ?string $navigationGroup = 'Master Data';
     protected static ?string $navigationLabel = 'Kelola Jadwal';
     protected static ?string $modelLabel = 'Jadwal Kelas';
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
     protected static ?int $navigationSort = 4;
-    protected static ?string $slug = 'kelola-jadwal'; 
+    protected static ?string $slug = 'kelola-jadwal';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                // Bagian Atas: Info Kelas (Read Only)
                 Forms\Components\Section::make('Identitas Kelas')
                     ->schema([
                         Forms\Components\TextInput::make('nama')
                             ->label('Nama Kelas')
                             ->disabled()
-                            ->dehydrated(false), // Data ini tidak ikut di-save ulang
+                            ->dehydrated(false),
                     ]),
 
-                // Bagian Utama: Input Jadwal (Repeater)
                 Forms\Components\Section::make('Jadwal Pelajaran')
                     ->description('Tambahkan sesi pelajaran untuk kelas ini.')
                     ->schema([
-                        // 'jadwals' adalah nama fungsi relasi hasMany di Model Kelas
-                        Forms\Components\Repeater::make('jadwals') 
+                        Forms\Components\Repeater::make('jadwals')
                             ->relationship()
                             ->label('')
                             ->addActionLabel('Tambah Sesi Pelajaran')
                             ->schema([
-                                // Kolom 1: Hari & Waktu
                                 Forms\Components\Grid::make(3)
                                     ->schema([
                                         Forms\Components\Select::make('hari')
@@ -63,7 +57,7 @@ class KelolaJadwalResource extends Resource
                                                 'Sabtu' => 'Sabtu',
                                             ])
                                             ->required(),
-                                        
+
                                         Forms\Components\TimePicker::make('jam_mulai')
                                             ->label('Mulai')
                                             ->seconds(false)
@@ -75,46 +69,41 @@ class KelolaJadwalResource extends Resource
                                             ->required(),
                                     ]),
 
-                                // Kolom 2: Mapel & Guru
                                 Forms\Components\Grid::make(2)
                                     ->schema([
-                                        // Pilih Mapel
                                         Forms\Components\Select::make('mapel_id')
                                             ->label('Mata Pelajaran')
                                             ->options(Mapel::all()->pluck('nama', 'id'))
                                             ->searchable()
                                             ->preload()
                                             ->required()
-                                            ->live() // PENTING: Agar dropdown guru bereaksi
-                                            ->afterStateUpdated(fn (Set $set) => $set('guru_id', null)),
+                                            ->live()
+                                            ->afterStateUpdated(fn(Set $set) => $set('guru_id', null)),
 
-                                        // Pilih Guru (Difilter otomatis)
                                         Forms\Components\Select::make('guru_id')
                                             ->label('Guru Pengampu')
                                             ->options(function (Get $get) {
                                                 $mapelId = $get('mapel_id');
-                                                
+
                                                 if (!$mapelId) {
-                                                    return []; // Kosongkan jika mapel belum dipilih
+                                                    return [];
                                                 }
 
-                                                // Logika Filter:
-                                                // Ambil Guru yang punya relasi ke Mapel yang dipilih
-                                                return Guru::whereHas('mapels', function ($query) use ($mapelId) {
-                                                    $query->where('mapels.id', $mapelId);
+                                                return Guru::whereHas('mapels', function ($q) use ($mapelId) {
+                                                    $q->where('mapels.id', $mapelId);
                                                 })->with('user')->get()->pluck('user.name', 'id');
                                             })
                                             ->searchable()
                                             ->preload()
                                             ->required()
-                                            ->placeholder(fn (Get $get) => $get('mapel_id') ? 'Pilih Guru' : 'Pilih Mapel Terlebih Dahulu'),
+                                            ->placeholder(fn(Get $get) => $get('mapel_id') ? 'Pilih Guru' : 'Pilih Mapel Terlebih Dahulu'),
                                     ]),
                             ])
-                            ->columns(1) // Tumpuk ke bawah agar rapi di HP
+                            ->columns(1)
                             ->defaultItems(0)
-                            ->cloneable() // Fitur copy biar cepat input jadwal sama
-                            ->reorderableWithButtons()
-                    ])
+                            ->cloneable()
+                            ->reorderableWithButtons(),
+                    ]),
             ]);
     }
 
@@ -127,7 +116,6 @@ class KelolaJadwalResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                // Menampilkan jumlah sesi pelajaran yang sudah diatur
                 Tables\Columns\TextColumn::make('jadwals_count')
                     ->counts('jadwals')
                     ->label('Total Sesi')
@@ -136,28 +124,32 @@ class KelolaJadwalResource extends Resource
                     ->sortable(),
             ])
             ->actions([
-                // Tombol aksi utama: "Atur Jadwal"
+                Tables\Actions\ViewAction::make()
+                    ->label('Lihat Jadwal')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn($record) => static::getUrl('view', ['record' => $record])),
+
                 Tables\Actions\EditAction::make()
                     ->label('Atur Jadwal')
                     ->icon('heroicon-m-calendar-days'),
             ])
-            ->bulkActions([]); // Matikan bulk action agar aman
+            ->bulkActions([]);
     }
 
-    public static function getRelations(): array
+    public static function getRecordView(): string
     {
-        return [];
+        return 'filament.resources.kelola-jadwal.view';
     }
 
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListKelolaJadwals::route('/'),
+            'view' => Pages\ViewKelolaJadwal::route('/{record}'), // 🔥 route wajib!
             'edit' => Pages\EditKelolaJadwal::route('/{record}/edit'),
         ];
     }
 
-    // Matikan tombol "Create" karena Kelas dibuat di menu Master Kelas, bukan disini
     public static function canCreate(): bool
     {
         return false;
